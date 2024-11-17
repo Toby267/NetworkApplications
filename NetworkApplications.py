@@ -743,6 +743,7 @@ class WebServer(NetworkApplication):
         try:
             # 1. Receive request message from the client
             message = connectionSocket.recv(MAX_DATA_RECV).decode()
+            print(message)
 
             # 2. Extract the path of the requested object from the message (second part of the HTTP header)
             filename = message.split()[1]
@@ -774,6 +775,7 @@ class WebServer(NetworkApplication):
 # TODO: A proxy implementation 
 class Proxy(NetworkApplication):
 
+    # must not keep persistent connection: 'proxy connection: close'
     # TODO: set up sockets
     def __init__(self, args):
         print('Web Proxy starting on port: %i...' % (args.port))
@@ -793,21 +795,27 @@ class Proxy(NetworkApplication):
             connectionSocket, addr = serverSocket.accept()
             print(f"Connection established with {addr}")
             
-            # TODO: choose which method to sent the packet to (web server method or client method)
-            # 5. Create a new thread to handle each client request
-            threading.Thread(target=self.handleClientRequest, args=(connectionSocket,)).start()
+            message = connectionSocket.recv(MAX_DATA_RECV).decode()
+
+            # 5. Create a new thread to handle each client request and server response
+            if message.split()[0] == "GET":
+                threading.Thread(target=self.handleClientRequest, args=(connectionSocket, message,)).start()
+            elif message.split()[0] == "HTTP/1.1":
+                threading.Thread(target=self.handleServerResponse, args=(connectionSocket, message,)).start()
+            else:
+                print("packet protocol not supported")
 
         # Close server socket (this would only happen if the loop was broken, which it isn't in this example)
         serverSocket.close()
 
     # TODO: forward packet from the client to the webserver
-    def handleClientRequest(self, connectionSocket):
+    def handleClientRequest(self, connectionSocket, message):
+        print(message)
+        # TODO: reformat the request and send it to the server
+        return
         try:
-            # 1. Receive request message from the client
-            message = connectionSocket.recv(MAX_DATA_RECV).decode()
-
             # 2. Extract the path of the requested object from the message (second part of the HTTP header)
-            filename = message.split()[1]
+            filename = message.split()[0]
             print("\nfilename: ", filename)
 
         except IOError:
@@ -822,6 +830,11 @@ class Proxy(NetworkApplication):
         finally:
             # Close the connection socket
             connectionSocket.close()
+
+    def handleServerResponse(self, connectionSocket, message):
+        # TODO: reformat the reponse (if need be) and sned it back to the client
+        # remove this once the function in implemented
+        pass
             
 
 # NOTE: Do NOT delete the code below
