@@ -819,10 +819,12 @@ class Proxy(NetworkApplication):
             # TODO: this for 127.0.0.1:8000/index.html
             reformattedMessage = message
 
-            # 3. forward message to server
+            # TODO: 3. check cache for the file
+
+            # 4. forward message to server
             serverSocket.send(reformattedMessage.encode())
 
-            # 4. receive the response from the server
+            # 5. receive the response from the server
             # TODO: parse the Content-Length and other field to parse it all properly
             response = ""
             while True:
@@ -832,6 +834,8 @@ class Proxy(NetworkApplication):
                 if len(response) == 0:
                     print("")
                     break
+
+            # 6. TODO: cache the response if it hasn't been cached yet
         except Exception as e:
             print(f"Error handling request: {e}")
         finally:
