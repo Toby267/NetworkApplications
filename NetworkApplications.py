@@ -373,7 +373,7 @@ class Traceroute(ICMPPing):
                 sys.exit(1)
             ttl += 1
 
-    # TODO: send 3 ICMP traceroute probes per TTL and collect responses
+    # send 3 ICMP traceroute probes per TTL and collect responses
     def sendIcmpProbesAndCollectResponses(self, ttl):
         pkt_keys = []
         hop_addrs = dict()
@@ -521,7 +521,7 @@ class Traceroute(ICMPPing):
 
         return dst_port, icmpType
     
-    # TODO: parse the response to the ICMP probe
+    # parse the response to the ICMP probe
     def parseICMPTracerouteResponse(self, trReplyPacket):
         # 1. Parse the IP header
         dst_port = None
@@ -593,7 +593,7 @@ class Traceroute(ICMPPing):
 
         return timeSent
 
-# TODO: A multi-threaded traceroute implementation
+# A multi-threaded traceroute implementation
 class MultiThreadedTraceRoute(Traceroute):
 
     def __init__(self, args):
@@ -772,11 +772,11 @@ class WebServer(NetworkApplication):
             # Close the connection socket
             connectionSocket.close()
 
-# TODO: A proxy implementation 
+# TODO: A proxy implementation 
 class Proxy(NetworkApplication):
 
     # must not keep persistent connection: 'proxy connection: close'
-    # TODO: set up sockets
+    # set up sockets
     def __init__(self, args):
         print('Web Proxy starting on port: %i...' % (args.port))
         
@@ -789,57 +789,55 @@ class Proxy(NetworkApplication):
         # 3. Continuously listen for connections to server socket
         proxySocket.listen(100)
         print("Server listening on port", args.port)
-
-
-        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         while True:
             # 4. Accept incoming connections
             clientSocket, addr = proxySocket.accept()
             print(f"Connection established with {addr}")
-            message = clientSocket.recv(MAX_DATA_RECV).decode()
             
-            # 5. Create a new thread to handle each client request and server response
-            if message.split()[0] == "GET":
-                threading.Thread(target=self.handleClientRequest, args=(clientSocket, serverSocket, message,)).start()
-            elif message.split()[0] == "HTTP/1.1":
-                threading.Thread(target=self.handleServerResponse, args=(clientSocket, serverSocket, message,)).start()
+            clientMessage = clientSocket.recv(MAX_DATA_RECV).decode()
+            
+            # 5. Create a new thread to handle each client server communication
+            if clientMessage.split()[0] == "GET":
+                threading.Thread(target=self.handleClientServerCommunication, args=(clientSocket, clientMessage,)).start()
             else:
                 print("packet protocol not supported")
 
         # Close server socket (this would only happen if the loop was broken, which it isn't in this example)
         proxySocket.close()
 
-    # TODO: forward packet from the client to the webserver
-    def handleClientRequest(self, clientSocket, serverSocket, message):
-        # TODO: reformat the request and send it to the server
+    # TODO: forward packets between the client and webserver 
+    def handleClientServerCommunication(self, clientSocket, message):
         try:
-            print(message)
+            # 1. format server socket
+            serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # TODO: find the host the correct way that will work for any GET packet
             host = message.split()[4]
-
             serverSocket.connect((host, 80))
-            serverSocket.send(message.encode())
 
-            firstResponse = serverSocket.recv(MAX_DATA_RECV).decode()
+            # 2. reformat the message if need be
+            # TODO: this for 127.0.0.1:8000/index.html
+            reformattedMessage = message
+
+            # 3. forward message to server
+            serverSocket.send(reformattedMessage.encode())
+
+            # 4. receive the response from the server
+            # TODO: parse the Content-Length and other field to parse it all properly
+            response = ""
             while True:
                 response = serverSocket.recv(MAX_DATA_RECV).decode()
+                clientSocket.send(response.encode())
                 print(response)
-                if response != firstResponse:
+                if len(response) == 0:
+                    print("")
                     break
-
-
-
         except Exception as e:
             print(f"Error handling request: {e}")
-
         finally:
-            # Close the connection socket
+            # Close the connection sockets
             clientSocket.close()
-
-    def handleServerResponse(self, clientSocket, serverSocket, message):
-        # TODO: reformat the reponse (if need be) and sned it back to the client
-        # remove this once the function in implemented
-        pass
+            serverSocket.close()
             
 
 # NOTE: Do NOT delete the code below
