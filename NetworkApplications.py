@@ -781,57 +781,63 @@ class Proxy(NetworkApplication):
         print('Web Proxy starting on port: %i...' % (args.port))
         
         # 1. Create a TCP socket
-        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        proxySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         # 2. Bind the TCP socket to server address and server port
-        serverSocket.bind(("", args.port))
+        proxySocket.bind(("", args.port))
         
         # 3. Continuously listen for connections to server socket
-        serverSocket.listen(100)
+        proxySocket.listen(100)
         print("Server listening on port", args.port)
+
+
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         while True:
             # 4. Accept incoming connections
-            connectionSocket, addr = serverSocket.accept()
+            clientSocket, addr = proxySocket.accept()
             print(f"Connection established with {addr}")
+            message = clientSocket.recv(MAX_DATA_RECV).decode()
             
-            message = connectionSocket.recv(MAX_DATA_RECV).decode()
-
             # 5. Create a new thread to handle each client request and server response
             if message.split()[0] == "GET":
-                threading.Thread(target=self.handleClientRequest, args=(connectionSocket, message,)).start()
+                threading.Thread(target=self.handleClientRequest, args=(clientSocket, serverSocket, message,)).start()
             elif message.split()[0] == "HTTP/1.1":
-                threading.Thread(target=self.handleServerResponse, args=(connectionSocket, message,)).start()
+                threading.Thread(target=self.handleServerResponse, args=(clientSocket, serverSocket, message,)).start()
             else:
                 print("packet protocol not supported")
 
         # Close server socket (this would only happen if the loop was broken, which it isn't in this example)
-        serverSocket.close()
+        proxySocket.close()
 
     # TODO: forward packet from the client to the webserver
-    def handleClientRequest(self, connectionSocket, message):
-        print(message)
+    def handleClientRequest(self, clientSocket, serverSocket, message):
         # TODO: reformat the request and send it to the server
-        return
         try:
-            # 2. Extract the path of the requested object from the message (second part of the HTTP header)
-            filename = message.split()[0]
-            print("\nfilename: ", filename)
+            print("did i get here at least")
+            print(message)
+            host = message.split()[4]
+            print("host: ", host)
 
-        except IOError:
-            # Handle file not found error
-            error_response = "HTTP/1.1 404 Not Found\r\n\r\n"
-            error_response += "<html><head></head><body><h1>404 Not Found</h1></body></html>\r\n"
-            connectionSocket.send(error_response.encode())
+            serverSocket.connect((host, 80))
+            serverSocket.sendall(message.encode())
+            print("hello")
+            #serverSocket.listen(100)
+            print("again")
+            while True:
+                response = serverSocket.recv(MAX_DATA_RECV).decode()
+                print("please work: ", response)
+
+
 
         except Exception as e:
             print(f"Error handling request: {e}")
 
         finally:
             # Close the connection socket
-            connectionSocket.close()
+            clientSocket.close()
 
-    def handleServerResponse(self, connectionSocket, message):
+    def handleServerResponse(self, clientSocket, serverSocket, message):
         # TODO: reformat the reponse (if need be) and sned it back to the client
         # remove this once the function in implemented
         pass
