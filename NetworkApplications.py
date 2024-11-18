@@ -814,19 +814,18 @@ class Proxy(NetworkApplication):
     def handleClientRequest(self, clientSocket, serverSocket, message):
         # TODO: reformat the request and send it to the server
         try:
-            print("did i get here at least")
             print(message)
             host = message.split()[4]
-            print("host: ", host)
 
             serverSocket.connect((host, 80))
-            serverSocket.sendall(message.encode())
-            print("hello")
-            #serverSocket.listen(100)
-            print("again")
+            serverSocket.send(message.encode())
+
+            firstResponse = serverSocket.recv(MAX_DATA_RECV).decode()
             while True:
                 response = serverSocket.recv(MAX_DATA_RECV).decode()
-                print("please work: ", response)
+                print(response)
+                if response != firstResponse:
+                    break
 
 
 
