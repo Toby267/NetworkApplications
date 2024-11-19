@@ -811,18 +811,35 @@ class Proxy(NetworkApplication):
         try:
             # 1. format server socket
             serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # TODO: find the host the correct way that will work for any GET packet
-            host = message.split()[4]
+            print("Message:\n" + message)
+            
+            host, request = "", ""
+
+            for line in message.split("\r\n"):
+                if line[:3] == "GET":
+                    request = line.split()[1]
+                if line[:5] == "Host:":
+                    host = line.split()[1]
+            
+            print("host:" + host)
+            print("request:" + request)
+
             serverSocket.connect((host, 80))
+            print("HI")
 
             # 2. reformat the message if need be
             # TODO: this for 127.0.0.1:8000/index.html
-            reformattedMessage = message
+            reformattedMessage = message.split(" ")
+            reformattedMessage.pop(1)
+            reformattedMessage.insert(1, "/")
+            print("yo" + "\r\n".join(reformattedMessage))
+            #reformattedMessage.join("\r\n")
 
             # TODO: 3. check cache for the file
+            # just store it in a hashmap
 
             # 4. forward message to server
-            serverSocket.send(reformattedMessage.encode())
+            serverSocket.send(("\r\n".join(reformattedMessage)).encode())
 
             # 5. receive the response from the server
             # TODO: parse the Content-Length and other field to parse it all properly
@@ -837,7 +854,7 @@ class Proxy(NetworkApplication):
 
             # 6. TODO: cache the response if it hasn't been cached yet
         except Exception as e:
-            print(f"Error handling request: {e}")
+            print(f"Error handling request or response: {e}")
         finally:
             # Close the connection sockets
             clientSocket.close()
