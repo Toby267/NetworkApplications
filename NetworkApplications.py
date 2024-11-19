@@ -743,7 +743,6 @@ class WebServer(NetworkApplication):
         try:
             # 1. Receive request message from the client
             message = connectionSocket.recv(MAX_DATA_RECV).decode()
-            print(message)
 
             # 2. Extract the path of the requested object from the message (second part of the HTTP header)
             filename = message.split()[1]
@@ -778,6 +777,8 @@ class Proxy(NetworkApplication):
     # must not keep persistent connection: 'proxy connection: close'
     # set up sockets
     def __init__(self, args):
+        cache = dict()
+        
         print('Web Proxy starting on port: %i...' % (args.port))
         
         # 1. Create a TCP socket
@@ -811,46 +812,45 @@ class Proxy(NetworkApplication):
         try:
             # 1. format server socket
             serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            print("Message:\n" + message)
             
-            host, request = "", ""
+            # find the host, file and port of the request
+            host, file, port = "", "", "80"
 
             for line in message.split("\r\n"):
                 if line[:3] == "GET":
-                    request = line.split()[1]
+                    file = line.split()[1]
                 if line[:5] == "Host:":
                     host = line.split()[1]
-            
-            print("host:" + host)
-            print("request:" + request)
+                    file = file.split(host)[-1]
+                    if ":" in host:
+                        port = host.split(":")[1]
+                        host = host.split(":")[0]
 
-            serverSocket.connect((host, 80))
-            print("HI")
-
-            # 2. reformat the message if need be
-            # TODO: this for 127.0.0.1:8000/index.html
-            reformattedMessage = message.split(" ")
-            reformattedMessage.pop(1)
-            reformattedMessage.insert(1, "/")
-            print("yo" + "\r\n".join(reformattedMessage))
-            #reformattedMessage.join("\r\n")
+            # 2. reformat the packet
+            reformattedMessage = message.split("\r\n")
+            reformattedMessage.pop(0)
+            reformattedMessage.insert(0, "GET " + file + " HTTP/1.1")
+            reformattedMessage = "\r\n".join(reformattedMessage)
 
             # TODO: 3. check cache for the file
             # just store it in a hashmap
+            isCached = False
 
-            # 4. forward message to server
-            serverSocket.send(("\r\n".join(reformattedMessage)).encode())
+            # 4. connect to and forward the message to the server
+            serverSocket.connect((host, int(port)))
+            serverSocket.send((reformattedMessage).encode())
 
             # 5. receive the response from the server
-            # TODO: parse the Content-Length and other field to parse it all properly
-            response = ""
             while True:
-                response = serverSocket.recv(MAX_DATA_RECV).decode()
-                clientSocket.send(response.encode())
-                print(response)
+                response = serverSocket.recv(MAX_DATA_RECV)
+                
                 if len(response) == 0:
-                    print("")
                     break
+                
+                if not isCached:
+                    pass
+
+                clientSocket.send(response)
 
             # 6. TODO: cache the response if it hasn't been cached yet
         except Exception as e:
