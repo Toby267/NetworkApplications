@@ -771,13 +771,13 @@ class WebServer(NetworkApplication):
             # Close the connection socket
             connectionSocket.close()
 
-# TODO: A proxy implementation 
+# A proxy implementation 
 class Proxy(NetworkApplication):
 
     # must not keep persistent connection: 'proxy connection: close'
     # set up sockets
     def __init__(self, args):
-        cache = dict()
+        self.cache = dict()
         
         print('Web Proxy starting on port: %i...' % (args.port))
         
@@ -807,7 +807,7 @@ class Proxy(NetworkApplication):
         # Close server socket (this would only happen if the loop was broken, which it isn't in this example)
         proxySocket.close()
 
-    # TODO: forward packets between the client and webserver 
+    # forward packets between the client and webserver 
     def handleClientServerCommunication(self, clientSocket, message):
         try:
             # 1. format server socket
@@ -832,27 +832,30 @@ class Proxy(NetworkApplication):
             reformattedMessage.insert(0, "GET " + file + " HTTP/1.1")
             reformattedMessage = "\r\n".join(reformattedMessage)
 
-            # TODO: 3. check cache for the file
-            # just store it in a hashmap
-            isCached = False
+            # 3. check cache for the file, send it if found, and return from the method
+            key = host + ":" + port + "/" + file
+            isCached = key in self.cache
 
-            # 4. connect to and forward the message to the server
+            if isCached:
+                clientSocket.send(self.cache[key].encode())
+                return
+
+            # 4. connect to, and forward the message to the server
             serverSocket.connect((host, int(port)))
             serverSocket.send((reformattedMessage).encode())
 
-            # 5. receive the response from the server
+            # 5. receive and cache the response from the server
+            self.cache[key] = ""
             while True:
                 response = serverSocket.recv(MAX_DATA_RECV)
                 
-                if len(response) == 0:
+                # break if entire file has been received
+                if len(response.decode()) == 0:
                     break
-                
-                if not isCached:
-                    pass
 
+                self.cache[key] += response.decode()
                 clientSocket.send(response)
 
-            # 6. TODO: cache the response if it hasn't been cached yet
         except Exception as e:
             print(f"Error handling request or response: {e}")
         finally:
