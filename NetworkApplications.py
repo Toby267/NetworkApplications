@@ -856,12 +856,17 @@ class Proxy(NetworkApplication):
                 self.cache[key] += response.decode()
                 clientSocket.send(response)
 
+            storeInCache(key)
+
         except Exception as e:
             print(f"Error handling request or response: {e}")
         finally:
             # Close the connection sockets
             clientSocket.close()
             serverSocket.close()
+
+    def storeInCache(self, key):
+        pass
             
 
 # NOTE: Do NOT delete the code below
