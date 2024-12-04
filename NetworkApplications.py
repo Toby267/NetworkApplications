@@ -779,10 +779,14 @@ class Proxy(NetworkApplication):
     def __init__(self, args):
         self.cache = dict()
 
-        #for filename in os.listdir("./cache"):
-        #    path = os.path.join("./cache", filename)
-        #    f = open(path, "r")
-        #    self.cache[filename] = f.read()[:-4]
+        # read the cache
+        for filename in os.listdir("./cache"):
+            path = os.path.join("./cache", filename)
+            if (filename[0] == "."):
+                continue
+            with open(path, "r") as f:
+                self.cache[filename[:-4]] = f.read()
+
         
         print('Web Proxy starting on port: %i...' % (args.port))
         
@@ -838,12 +842,14 @@ class Proxy(NetworkApplication):
             reformattedMessage = "\r\n".join(reformattedMessage)
 
             # 3. check cache for the file, send it if found, and return from the method
-            key = host + ":" + port + "/" + file
+            key = "HOST:" + host + "PORT:" + port + "FILE:" + file
+            if file == "/":
+                key = key[0:-1]
             isCached = key in self.cache
 
             if isCached:
                 clientSocket.send(self.cache[key].encode())
-                #print("used the cacheAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaa")
+                print("used the cacheAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaa")
                 return
 
             # 4. connect to, and forward the message to the server
@@ -852,6 +858,8 @@ class Proxy(NetworkApplication):
 
             # 5. receive and cache the response from the server
             self.cache[key] = ""
+            filename = key + ".txt"
+
             while True:
                 response = serverSocket.recv(MAX_DATA_RECV)
                 
@@ -859,12 +867,13 @@ class Proxy(NetworkApplication):
                 if len(response.decode()) == 0:
                     break
 
-                self.cache[key] += response.decode()
                 clientSocket.send(response)
 
-            #print("key: ", key)
-            #f = open(("./cache/", key, ".txt"), "x")
-            #f.write(self.cache[key])
+                self.cache[key] += response.decode()
+
+                f = open(os.path.join("./cache", filename), "a")
+                f.write(response.decode())
+                f.close()
 
         except Exception as e:
             print(f"Error handling request or response: {e}")
