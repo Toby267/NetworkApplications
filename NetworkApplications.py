@@ -778,6 +778,11 @@ class Proxy(NetworkApplication):
     # set up sockets
     def __init__(self, args):
         self.cache = dict()
+
+        #for filename in os.listdir("./cache"):
+        #    path = os.path.join("./cache", filename)
+        #    f = open(path, "r")
+        #    self.cache[filename] = f.read()[:-4]
         
         print('Web Proxy starting on port: %i...' % (args.port))
         
@@ -838,6 +843,7 @@ class Proxy(NetworkApplication):
 
             if isCached:
                 clientSocket.send(self.cache[key].encode())
+                #print("used the cacheAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaa")
                 return
 
             # 4. connect to, and forward the message to the server
@@ -856,7 +862,9 @@ class Proxy(NetworkApplication):
                 self.cache[key] += response.decode()
                 clientSocket.send(response)
 
-            storeInCache(key)
+            #print("key: ", key)
+            #f = open(("./cache/", key, ".txt"), "x")
+            #f.write(self.cache[key])
 
         except Exception as e:
             print(f"Error handling request or response: {e}")
@@ -864,9 +872,6 @@ class Proxy(NetworkApplication):
             # Close the connection sockets
             clientSocket.close()
             serverSocket.close()
-
-    def storeInCache(self, key):
-        pass
             
 
 # NOTE: Do NOT delete the code below
