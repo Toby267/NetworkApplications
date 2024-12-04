@@ -779,6 +779,11 @@ class Proxy(NetworkApplication):
     def __init__(self, args):
         self.cache = dict()
 
+        for filename in os.listdir("./cache"):
+            path = os.path.join("./cache", filename)
+            if (filename[0] != "."):
+                os.remove(path)
+
         # read the cache
         for filename in os.listdir("./cache"):
             path = os.path.join("./cache", filename)
@@ -842,14 +847,13 @@ class Proxy(NetworkApplication):
             reformattedMessage = "\r\n".join(reformattedMessage)
 
             # 3. check cache for the file, send it if found, and return from the method
-            key = "HOST:" + host + "PORT:" + port + "FILE:" + file
-            if file == "/":
-                key = key[0:-1]
+            key = "HOST:" + host + "FILE:" + file
+            key = key.replace("/", "")
+
             isCached = key in self.cache
 
             if isCached:
                 clientSocket.send(self.cache[key].encode())
-                print("used the cacheAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaa")
                 return
 
             # 4. connect to, and forward the message to the server
