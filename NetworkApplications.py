@@ -779,6 +779,7 @@ class Proxy(NetworkApplication):
     def __init__(self, args):
         self.cache = dict()
 
+        # delete the cache
         for filename in os.listdir("./cache"):
             path = os.path.join("./cache", filename)
             if (filename[0] != "."):
